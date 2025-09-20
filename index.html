@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weather App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="card">
+    <div class="search">
+      <input type="text" placeholder="Search city" id="search" spellcheck="false">
+      <button><img src="search-img.png" alt="search"></button>
+    </div>
+    <div class="weather">
+      <img src="https://openweathermap.org/img/wn/01d.png" id="weather-icon" width="80">
+      <h1 class="temp">--°C</h1>
+      <h2 class="city">City (Country)</h2>
+    </div>
+    <div class="details">
+      <div class="col">
+        <p class="humidity">--%</p>
+        <p>Humidity</p>
+      </div>
+      <div class="col">
+        <p class="wind">-- km/h</p>
+        <p>Wind</p>
+      </div>
+      <div class="col">
+        <p class="feels">--°C</p>
+        <p>Feels Like</p>
+      </div>
+      <div class="col">
+        <p class="clouds">--%</p>
+        <p>Clouds</p>
+      </div>
+      <div class="col">
+        <p class="desc">--</p>
+        <p>Condition</p>
+      </div>
+      <div class="col">
+        <p class="sunrise">--:--</p>
+        <p>Sunrise</p>
+      </div>
+      <div class="col">
+        <p class="sunset">--:--</p>
+        <p>Sunset</p>
+      </div>
+    </div>
+    <div class="forecast">
+      <h3>Weekly Forecast (Mon–Sun)</h3>
+      <div class="forecast-days" id="forecast">
+      </div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+
+
+  <script>
+  const apikey = "92920d2d6672e58a284902cc4f2db754";
+  const apiurl = "https://api.openweathermap.org/data/2.5/weather?units=metric&q=";
+  const forecasturl = "https://api.openweathermap.org/data/2.5/forecast?units=metric&q=";
+
+  const searchbox = document.querySelector(".search input");
+  const searchbtn = document.querySelector(".search button");
+
+  // -------- Current Weather --------
+  async function checkWeather(city) {
+    const response = await fetch(`${apiurl}${city}&appid=${apikey}`);
+    const data = await response.json();
+
+    if (data.cod !== 200) {
+      alert("City not found!");
+      return;
+    }
+
+    document.querySelector(".city").innerHTML = data.name + " (" + data.sys.country + ")";
+    document.querySelector(".temp").innerHTML = Math.round(data.main.temp) + "°C";
+    document.querySelector(".humidity").innerHTML = data.main.humidity + "%";
+    document.querySelector(".wind").innerHTML = data.wind.speed + " km/h";
+    document.querySelector(".feels").innerHTML = Math.round(data.main.feels_like) + "°C";
+    document.querySelector(".clouds").innerHTML = data.clouds.all + "%";
+    document.querySelector(".desc").innerHTML = data.weather[0].description;
+    document.getElementById("weather-icon").src =
+      `https://openweathermap.org/img/wn/${data.weather[0].icon}.png`;
+
+    // Sunrise & Sunset
+    let sunrise = new Date(data.sys.sunrise * 1000);
+    let sunset = new Date(data.sys.sunset * 1000);
+    document.querySelector(".sunrise").innerHTML = sunrise.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    document.querySelector(".sunset").innerHTML = sunset.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+    // Call forecast
+    getForecast(city);
+  }
+
+  // -------- 7-Day Forecast (from 3-hourly data) --------
+  async function getForecast(city) {
+    const response = await fetch(`${forecasturl}${city}&appid=${apikey}`);
+    const data = await response.json();
+
+    let forecastContainer = document.getElementById("forecast");
+    forecastContainer.innerHTML = "";
+
+    let daily = {};
+    data.list.forEach((item) => {
+      let date = new Date(item.dt_txt);
+      let day = date.toLocaleDateString("en-US", { weekday: "long" });
+
+      if (!daily[day]) {
+        daily[day] = item; // pick first available record for that day
+      }
+    });
+
+    let days = Object.keys(daily).slice(0, 7); // max 7 days
+
+    days.forEach((day) => {
+      let dayData = daily[day];
+      let temp = Math.round(dayData.main.temp);
+      let icon = `https://openweathermap.org/img/wn/${dayData.weather[0].icon}.png`;
+
+      forecastContainer.innerHTML += `
+        <div class="day">
+          <p>${day}</p>
+          <img src="${icon}" alt="icon">
+          <p>${temp}°C</p>
+        </div>
+      `;
+    });
+  }
+
+  // -------- Search Button --------
+  searchbtn.addEventListener("click", () => {
+    checkWeather(searchbox.value);
+  });
+</script>
+
+</body>
+</html>
